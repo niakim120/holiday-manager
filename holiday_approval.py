@@ -169,7 +169,7 @@ def run():
                 f" {target_item['休假日期']}）"
             )
 
-            status_options = ["待批", "批準", "不準", "取消"]
+            status_options = ["待批", "批准", "不准", "取消"]
             default_index = (
                 status_options.index(current_status)
                 if current_status in status_options
@@ -184,13 +184,13 @@ def run():
 
             if submitted:
                 # 邏輯判斷：結餘天數加回或扣除
-                # 情況 A：本來是「批準」，現在改為「不準」或「取消」 -> 要把假天數加回結餘
-                if current_status == "批準" and new_status in ["不準", "取消"]:
+                # 情況 A：本來是「批准」，現在改為「不准」或「取消」 -> 要把假天數加回結餘
+                if current_status == "批准" and new_status in ["不准", "取消"]:
                     update_balance_days(holiday_name, app_days)
-                    add_system_log(f"【結餘調整】因申請狀態從批準變更為 {new_status}，已自動加回 {app_days} 天至 {holiday_name}")
+                    add_system_log(f"【結餘調整】因申請狀態從批准變更為 {new_status}，已自動加回 {app_days} 天至 {holiday_name}")
 
-                # 情況 B：本來不是批準（例如「待批」、「不準」），現在改為「批準」 -> 若原本扣過或需要額外扣除可在此處理（視你的申請扣款時機而定）
-                # 這裡主要實現你要求的：不準和取消時，假期結餘相應假期要加回
+                # 情況 B：本來不是批准（例如「待批」、「不准」），現在改為「批准」 -> 若原本扣過或需要額外扣除可在此處理（視你的申請扣款時機而定）
+                # 這裡主要實現你要求的：不准和取消時，假期結餘相應假期要加回
 
                 results[app_id] = new_status
                 save_results(results)
