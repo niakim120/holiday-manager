@@ -132,8 +132,8 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.subheader("📱 手機快速掃描")
 
-    # 請把這裡引號內的網址換成你目前的實際雲端網址
-    current_url = "https://holiday-manager-tjefgglkoj6muaegvntua.streamlit.app"
+    # 動態獲取目前的網址
+    current_url = st.query_params.get("url", "https://holiday-manager-tjefgglkoj6muaegvntua.streamlit.app")
 
     img = qrcode.make(current_url)
     buf = BytesIO()
