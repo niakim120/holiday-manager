@@ -7,7 +7,6 @@ import streamlit as st
 
 
 def add_system_log(detail_text):
-    # 確保路徑與根目錄一致
     BASE_DIR = Path(__file__).resolve().parent
     log_file = BASE_DIR / "holiday_logs.json"
     BASE_DIR.mkdir(exist_ok=True)
@@ -46,7 +45,7 @@ def load_approval_results():
 
 
 def get_available_holidays():
-    """讀取 holidays.json 與申請紀錄及審核狀態，計算出最新的剩餘日數大於 0 的假期"""
+    """計算扣除有效申請後的剩餘假期"""
     BASE_DIR = Path(__file__).resolve().parent
     data_file = BASE_DIR / "holidays.json"
     application_file = BASE_DIR / "holiday_applications.json"
@@ -59,10 +58,8 @@ def get_available_holidays():
         except Exception:
             holidays_list = []
 
-    # 讀取審核狀態
     approval_results = load_approval_results()
 
-    # 統計已被扣除的天數（排除「不準」與「取消」的申請）
     applied_counts = {}
     if application_file.exists():
         try:
@@ -73,10 +70,9 @@ def get_available_holidays():
                     holiday_date = app.get("date", "")
                     app_id = f"{holiday_date}_{h_name}_{idx}"
                     
-                    # 取得審核狀態（預設為待批）
                     status = approval_results.get(app_id, "待批")
                     
-                    # 只有當狀態不是「不準」也不是「取消」時，才計算已使用天數
+                    # 只有狀態不是「不準」也不是「取消」時才計入扣除
                     if h_name and status not in ["不準", "取消"]:
                         try:
                             days_val = float(app.get("days", 1))
@@ -94,7 +90,6 @@ def get_available_holidays():
             used_days = applied_counts.get(h_name, 0.0)
             remaining_days = original_days - used_days
 
-            # 只有當最新剩餘日數大於 0 時才加入可用清單
             if remaining_days > 0:
                 formatted_days = (
                     str(int(remaining_days))
@@ -118,34 +113,37 @@ def run():
     application_file = BASE_DIR / "holiday_applications.json"
     BASE_DIR.mkdir(exist_ok=True)
 
-    # 取得可用假期
-    available_holidays = get_available_holidays()
-
-    if not available_holidays:
-        st.warning("目前沒有可供申請的有效假期！")
-        return
-
-    # 建立下拉選項格式
-    holiday_display_list = [
-        f"{h['name']} ({h['year']}年 - 剩餘 {h['days']} 天)"
-        for h in available_holidays
-    ]
-
-    # 使用 Streamlit 表單
+    # 1. 檢查重複申請邏輯必須在送出時嚴格執行，且不能影響結餘計算
     with st.form("apply_form"):
         st.subheader("請填寫假期申請資訊")
 
-        # 日期選擇
         now = datetime.now()
         app_date = st.date_input("申請日期", value=now)
 
-        # 假期選擇
-        selected_holiday_str = st.selectbox("選擇假期", holiday_display_list)
+        # 動態載入當前最新的可用假期
+        available_holidays = get_available_holidays()
 
-        # 提交按鈕
+        if not available_holidays:
+            st.warning("目前沒有可供申請的有效假期！")
+            holiday_display_list = []
+        else:
+            holiday_display_list = [
+                f"{h['name']} ({h['year']}年 - 剩餘 {h['days']} 天)"
+                for h in available_holidays
+            ]
+
+        selected_holiday_str = st.selectbox(
+            "選擇假期", 
+            holiday_display_list if holiday_display_list else ["無可用假期"]
+        )
+
         submitted = st.form_submit_button("提交申請")
 
         if submitted:
+            if not holiday_display_list:
+                st.error("目前沒有可供申請的有效假期！")
+                return
+
             formatted_date = app_date.strftime("%Y/%m/%d")
             holiday_name_clean = selected_holiday_str.split(" (")[0].strip()
 
@@ -175,7 +173,7 @@ def run():
                     "holiday_name": holiday_name_clean,
                     "full_info": selected_holiday_str,
                     "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "days": 1,  # 確保每筆申請記錄帶有天數欄位
+                    "days": 1,
                 }
                 applications.append(app_data)
 
@@ -190,6 +188,8 @@ def run():
                     st.success(
                         f"已成功提交假期申請！\n\n日期：{formatted_date}\n假期：{holiday_name_clean}"
                     )
+                    # 提交成功後強制重新整理以更新畫面結餘
+                    st.rerun()
                 except Exception as e:
                     st.error(f"儲存申請失敗：{e}")
 
