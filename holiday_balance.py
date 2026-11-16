@@ -60,7 +60,9 @@ def load_data():
     # 讀取批核結果狀態
     approval_results = load_approval_results()
 
-    # 統計每個假期被「批準」所消耗的總天數
+    # 統計已使用的天數：
+    # 邏輯：提交申請時即先作扣減（包含「待批」與「批準」）。
+    # 只有當狀態明確被改為「不準」或「取消」時，才不予扣除（即加回結餘）。
     applied_counts = {}
     if application_file.exists():
         try:
@@ -71,14 +73,12 @@ def load_data():
                     holiday_date = app.get("date", "")
                     app_id = f"{holiday_date}_{h_name}_{idx}"
                     
-                    # 取得該申請的審核狀態（預設為待批或未審核）
+                    # 取得該申請的審核狀態（預設為「待批」）
                     status = approval_results.get(app_id, "待批")
                     
-                    # 核心邏輯：只有當狀態為「批準」時，才計算已使用的天數
-                    # 如果狀態是「不準」或「取消」或「待批」，則不予扣除（等於自動加回結餘）
-                    if h_name and status == "批準":
+                    # 核心條件：只要狀態不是「不準」也不是「取消」，就計入已使用（扣除結餘）
+                    if h_name and status not in ["不準", "取消"]:
                         try:
-                            # 支援讀取申請時的天數（若無則預設 1 天）
                             days_val = float(app.get("days", 1))
                         except (ValueError, TypeError):
                             days_val = 1.0
@@ -139,7 +139,6 @@ def run():
             "剩餘日數": data["days"],
         })
 
-    # Streamlit 的 dataframe 內建支援點擊欄位標題進行排序
     st.dataframe(table_data, use_container_width=True)
     st.caption("💡 提示：點擊表格上方的欄位標題即可進行排序。")
 
