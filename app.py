@@ -3,7 +3,6 @@ from io import BytesIO
 import json
 import os
 from pathlib import Path
-import qrcode
 import streamlit as st
 
 # 嘗試匯入各個模組
@@ -127,21 +126,6 @@ def main():
             holiday_log.run()
         else:
             st.error("找不到 holiday_log.py 模組！")
-
-    # ==================== 側邊欄：加入手機掃描 QR Code 功能 ====================
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("📱 手機快速掃描")
-
-    # 動態獲取目前的網址
-    current_url = st.query_params.get("url", "https://holiday-manager-tjefgglkoj6muaegvntua.streamlit.app")
-
-    img = qrcode.make(current_url)
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    byte_im = buf.getvalue()
-
-    st.sidebar.image(byte_im, caption="用手機相機掃描即可使用", width=160)
-    st.sidebar.markdown("---")
 
     # 側邊欄：系統設定
     st.sidebar.title("⚙️ 系統設定")
